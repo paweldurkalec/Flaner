@@ -945,6 +945,9 @@ def main():
                         old_w, old_h = image_rect.size
                         rel_x = (mx - image_rect.x) / old_w if old_w else 0
                         rel_y = (my - image_rect.y) / old_h if old_h else 0
+                        # clamp relative position to valid range (handles edge cases)
+                        rel_x = max(0.0, min(rel_x, 1.0))
+                        rel_y = max(0.0, min(rel_y, 1.0))
                         image_scale = new_scale
                         user_zoomed = True
                         # rescale image surface
@@ -954,6 +957,14 @@ def main():
                         # keep mouse point stable
                         new_x = int(mx - rel_x * new_w)
                         new_y = int(my - rel_y * new_h)
+                        # ensure image_rect doesn't go out of reasonable bounds
+                        # allow some overhang but not excessive
+                        max_x = win_w  # left edge can be at most at right edge of window
+                        min_x = SIDEBAR_WIDTH - new_w  # allow scrolling off left edge
+                        max_y = win_h  # top edge can be at most at bottom of window
+                        min_y = -new_h  # allow scrolling off top edge
+                        new_x = max(int(min_x), min(int(max_x), new_x))
+                        new_y = max(int(min_y), min(int(max_y), new_y))
                         image_rect = pygame.Rect(new_x, new_y, new_w, new_h)
 
                 pass
@@ -1096,15 +1107,15 @@ def main():
                 oy2 = (sy2 - image_rect.y) / image_scale
                 disp_w = abs(sx2 - sx1)
                 disp_h = abs(sy2 - sy1)
-                orig_w = abs(ox2 - ox1)
-                orig_h = abs(oy2 - oy1)
+                rect_orig_w = abs(ox2 - ox1)
+                rect_orig_h = abs(oy2 - oy1)
                 # prefer meters if scale known, otherwise show pixels
                 if pixels_per_meter:
-                    wtxt = f"{(orig_w / pixels_per_meter):.2f} m"
-                    htxt = f"{(orig_h / pixels_per_meter):.2f} m"
+                    wtxt = f"{(rect_orig_w / pixels_per_meter):.2f} m"
+                    htxt = f"{(rect_orig_h / pixels_per_meter):.2f} m"
                 else:
-                    wtxt = f"{int(round(orig_w))} px"
-                    htxt = f"{int(round(orig_h))} px"
+                    wtxt = f"{int(round(rect_orig_w))} px"
+                    htxt = f"{int(round(rect_orig_h))} px"
                 try:
                     # scaled rendering for width label
                     base_wshadow = base_label_font.render(wtxt, True, (10,10,10))
